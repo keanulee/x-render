@@ -1,4 +1,5 @@
 const express = require('express');
+const fetch = require('node-fetch');
 const fs = require('fs');
 const jsdom = require('jsdom');
 const { JSDOM } = jsdom;
@@ -7,18 +8,35 @@ const { JSDOM } = jsdom;
 const app = express();
 
 
-app.get('/', function (req, res) {
-  JSDOM.fromFile('client/index.html', { runScripts: 'outside-only' }).then((dom) => {
-    dom.window.XRenderElement = class {};
+app.get('/', async function (req, res) {
+  JSDOM.fromFile('client/index.html', { runScripts: 'outside-only' }).then(async (dom) => {
+    dom.window.fetch = fetch;
+    dom.window.XRenderElement = class {
+      xInit() {
+        // virtual - must return promise that resolves when xRender() can be run.
+        return Promise.resolve();
+      }
+
+      xRender() {
+        // abstract
+      }
+    };
+
     dom.window.elementRegistry = {};
-    dom.window.renderSubtree = function renderSubtree(rootNode) {
+    dom.window.renderSubtree = async function renderSubtree(rootNode) {
       for (let tagName in dom.window.elementRegistry) {
         let elements = rootNode.querySelectorAll(tagName);
+        let klass = dom.window.elementRegistry[tagName].prototype;
         for (let i = 0; i < elements.length; ++i) {
           const el = elements[i];
-          el.setAttribute('x-rendered', '');
-          dom.window.elementRegistry[tagName].prototype.xRender.call(el);
-          renderSubtree(el);
+          if (!el.hasAttribute('x-rendered')) {
+            el.setAttribute('x-rendered', '');
+            // TODO: render elements in parallel
+            await klass.xInit.call(el).then(() => {
+              klass.xRender.call(el);
+              renderSubtree(el);
+            });
+          }
         }
       };
     };
@@ -34,7 +52,7 @@ app.get('/', function (req, res) {
       dom.window.eval(fs.readFileSync('elements/' + filename, { encoding: 'UTF-8' }));
     });
 
-    dom.window.renderSubtree(dom.window.document);
+    await dom.window.renderSubtree(dom.window.document);
     res.send(dom.serialize());
   });
 });
