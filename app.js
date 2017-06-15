@@ -34,7 +34,8 @@ app.get('/', (req, res) => {
               el.setAttribute('x-rendered', '');
               // TODO: render elements in parallel
               await klass.xInit.call(el);
-              await klass.xRender.call(el);
+              klass.xRenderChildren.call(el);
+              klass.xAssignChildrenData.call(el);
               await renderSubtree(el);
             }
           }
@@ -42,7 +43,7 @@ app.get('/', (req, res) => {
       };
       dom.window.customElements = {
         define: (tagName, c) => {
-          if (typeof c.prototype.xRender === 'function') {
+          if (typeof c.prototype.xInit === 'function') {
             dom.window.elementRegistry[tagName] = c;
           }
         }

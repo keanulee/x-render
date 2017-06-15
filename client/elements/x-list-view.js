@@ -1,4 +1,5 @@
 import { XRenderElement } from './x-render.js'
+import './x-list-item.js'
 
 customElements.define('x-list-view', class extends XRenderElement {
   xInit() {
@@ -9,13 +10,18 @@ customElements.define('x-list-view', class extends XRenderElement {
       });
   }
 
-  xRender() {
-    const ul = document.createElement('ul');
-    this.data.forEach((story) => {
-      const li = document.createElement('li');
-      li.innerHTML = `<a href="${story.url}">${story.title}</a>`;
-      ul.appendChild(li);
-    })
-    this.appendChild(ul);
+  xRenderChildren() {
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < this.data.length; ++i) {
+      frag.appendChild(document.createElement('x-list-item'));
+    }
+    this.appendChild(frag);
+  }
+
+  xAssignChildrenData() {
+    // Needed to add properties to server-rendered CEs
+    this.data.forEach((story, i) => {
+      this.children[i].data = story;
+    });
   }
 });

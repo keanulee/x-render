@@ -6,7 +6,7 @@ customElements.define('x-header', class extends XRenderElement {
     return Promise.resolve();
   }
 
-  xRender() {
+  xRenderChildren() {
     this.innerHTML = `<h1>${this.heading}</h1>`;
   }
 });
