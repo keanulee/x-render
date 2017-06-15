@@ -10,8 +10,8 @@ const app = express();
 
 let rollupCache;
 
-app.get('/', async function (req, res) {
-  JSDOM.fromFile('client/index.html', { runScripts: 'outside-only' }).then(async (dom) => {
+app.get('/', (req, res) => {
+  JSDOM.fromFile('client/index.html', { runScripts: 'outside-only' }).then((dom) => {
     // Use rollup since jsdom doesn't do imports
     rollup.rollup({
       entry: 'client/' + dom.window.document.querySelector('script[type=module]').getAttribute('src'),
@@ -53,6 +53,18 @@ app.get('/', async function (req, res) {
       await dom.window.renderSubtree(dom.window.document);
       res.send(dom.serialize());
     });
+  });
+});
+
+app.get('/elements/x-app.bundle.js', (req, res) => {
+  rollup.rollup({
+    entry: 'client/elements/x-app.js',
+    cache: rollupCache
+  }).then((bundle) => {
+    rollupCache = bundle;
+    const result = bundle.generate({ format: 'es' });
+    res.set('Content-Type', 'text/javascript');
+    res.send(result.code);
   });
 });
 
