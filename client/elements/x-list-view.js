@@ -1,3 +1,5 @@
+import { XRenderElement } from './x-render.js'
+
 customElements.define('x-list-view', class extends XRenderElement {
   xInit() {
     return fetch('https://node-hnapi.herokuapp.com/news')

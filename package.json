@@ -5,6 +5,7 @@
   "dependencies": {
     "express": "^4.15.3",
     "jsdom": "^11.0.0",
-    "node-fetch": "^1.7.1"
+    "node-fetch": "^1.7.1",
+    "rollup": "^0.43.0"
   }
 }

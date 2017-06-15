@@ -1,3 +1,5 @@
+export { XRenderElement }
+
 class XRenderElement extends HTMLElement {
   xInit() {
     // virtual - must return promise that resolves when xRender() can be run.
