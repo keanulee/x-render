@@ -4,7 +4,7 @@ import './x-list-item.js'
 customElements.define('x-list-view', class extends XRenderElement {
   static get props() {
     return {
-      path: String
+      path: null
     }
   }
 

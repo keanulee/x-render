@@ -2,17 +2,24 @@ export { XRenderElement }
 
 class XRenderElement extends HTMLElement {
   /**
+   * Set props on self, if necessary.
+   * Note: future prop setting will cause re-render
+   */
+  xStart() {
+    // virtual
+  }
+
+  /**
    * Initialization code that is run by client and server before xRenderChildren()
    * after all properties defined in the props getter are set.
    * Used to assign properties on `this` that are needed by xRenderChildren().
    * (On client, this is run in constuctor()).
    * Example: Fetch data from API and assign to `this.data`.
    *
-   * @return {Promise} A promise that resolves when xRenderChildren() can be run.
+   * @return {!Promise} A promise that resolves when xRenderChildren() can be run.
    */
   xInit() {
     // virtual
-    return Promise.resolve();
   }
 
   /**
@@ -69,11 +76,13 @@ class XRenderElement extends HTMLElement {
       if (oldPropValue) {
         this[propName] = oldPropValue;
       }
-    })
+    });
+    this.xStart();
   }
 
   _render() {
-    if (!this.isConnected) {
+    // Can't rely on isConnected, since prop setter may run before first connectedCallback.
+    if (!this._firstConnectedCallback) {
       return;
     }
 
@@ -82,7 +91,7 @@ class XRenderElement extends HTMLElement {
     });
 
     if (allPropsDefined) {
-      this.xInit().then(() => {
+      Promise.resolve(this.xInit()).then(() => {
         if (!this.hasAttribute('x-rendered')) {
           this.xRenderChildren();
         } else {
@@ -95,6 +104,7 @@ class XRenderElement extends HTMLElement {
   }
 
   connectedCallback() {
+    this._firstConnectedCallback = true;
     this._render();
   }
 }

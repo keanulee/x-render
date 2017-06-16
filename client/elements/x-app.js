@@ -3,22 +3,40 @@ import './x-header.js'
 import './x-list-view.js'
 
 customElements.define('x-app', class extends XRenderElement {
-  xRenderChildren() {
-    const itemMatch = /^\/item\/(\d*)/.exec(window.location.pathname);
-    if (itemMatch) {
-      this.classList.remove('list-view');
-      this.classList.add('item-view');
-    } else {
-      switch (window.location.pathname) {
-        case '/':
-        case '/news':
-        case '/show':
-        case '/ask':
-        case '/jobs':
-          this.classList.add('list-view');
-          this.classList.remove('item-view');
-      }
+  static get props() {
+    return {
+      path: null
     }
+  }
+
+  xStart() {
+    this.updateVisiblePage();
+  }
+
+  xInit() {
+    const itemMatch = /^\/item\/(\d*)/.exec(this.path);
+    if (itemMatch) {
+      this._selectedView = 'item';
+      this._itemId = itemMatch[1];
+      return;
+    }
+    switch (this.path) {
+      case '/':
+      case '/news':
+      case '/newest':
+      case '/show':
+      case '/ask':
+      case '/jobs':
+        this._selectedView = 'list';
+        this._listPath = this.path.slice(1) || 'news';
+        return;
+    }
+    this._selectedView = '';
+  }
+
+  xRenderChildren() {
+    this.classList.toggle('list-view', this._selectedView === 'list');
+    this.classList.toggle('item-view', this._selectedView === 'item');
     this.innerHTML = `<x-header></x-header><x-list-view></x-list-view><x-item></x-item>`;
   }
 
@@ -26,7 +44,17 @@ customElements.define('x-app', class extends XRenderElement {
     this._listElement = this.querySelector('x-list-view');
     this._itemElement = this.querySelector('x-item');
 
-    this.updateVisiblePage();
+    // this.updateVisiblePage();
+    if (this._selectedView === 'item') {
+      this._listElement.path = null;
+      this._itemElement.itemId = this._itemId;
+    } else if (this._selectedView === 'list') {
+      this._listElement.path = this._listPath;
+      this._itemElement.itemId = null;
+    } else {
+      this._listElement.path = null;
+      this._itemElement.itemId = null;
+    }
   }
 
   xAddEventListeners() {
@@ -38,22 +66,7 @@ customElements.define('x-app', class extends XRenderElement {
    * Display the appropriate view based on the URL.
    */
   updateVisiblePage() {
-    const itemMatch = /^\/item\/(\d*)/.exec(window.location.pathname);
-    if (itemMatch) {
-      this._itemElement.itemId = itemMatch[1];
-      return;
-    }
-    switch (window.location.pathname) {
-      case '/':
-      case '/news':
-      case '/newest':
-      case '/show':
-      case '/ask':
-      case '/jobs':
-        this._listElement.path = window.location.pathname.slice(1) || 'news';
-        return;
-    }
-    this._listElement.path = null;
+    this.path = window.location.pathname;
   }
 
   /**

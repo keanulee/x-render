@@ -3,7 +3,7 @@ import { XRenderElement } from './x-render.js'
 customElements.define('x-list-item', class extends XRenderElement {
   static get props() {
     return {
-      data: String
+      data: null
     }
   }
 

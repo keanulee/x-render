@@ -61,9 +61,10 @@ app.get('/*', (req, res) => {
               }
 
               // TODO: render elements in parallel
+              await el.xStart();
               await el.xInit();
-              el.xRenderChildren();
-              el.xAssignChildrenData();
+              await el.xRenderChildren();
+              await el.xAssignChildrenData();
               await renderSubtree(el);
             }
           }
