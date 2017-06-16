@@ -1,6 +1,7 @@
 import { XRenderElement } from './x-render.js'
 import './x-header.js'
 import './x-list-view.js'
+import './x-item.js'
 
 customElements.define('x-app', class extends XRenderElement {
   static get props() {
@@ -44,16 +45,10 @@ customElements.define('x-app', class extends XRenderElement {
     this._listElement = this.querySelector('x-list-view');
     this._itemElement = this.querySelector('x-item');
 
-    // this.updateVisiblePage();
     if (this._selectedView === 'item') {
-      this._listElement.path = null;
       this._itemElement.itemId = this._itemId;
     } else if (this._selectedView === 'list') {
       this._listElement.path = this._listPath;
-      this._itemElement.itemId = null;
-    } else {
-      this._listElement.path = null;
-      this._itemElement.itemId = null;
     }
   }
 

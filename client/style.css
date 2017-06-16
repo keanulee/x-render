@@ -5,3 +5,8 @@ body {
 x-list-item {
   display: block;
 }
+
+x-comments {
+  display: block;
+  margin-left: 20px;
+}

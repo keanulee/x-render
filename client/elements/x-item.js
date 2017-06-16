@@ -1,16 +1,17 @@
 import { XRenderElement } from './x-render.js'
 import './x-list-item.js'
+import './x-comments.js'
 
-customElements.define('x-list-view', class extends XRenderElement {
+customElements.define('x-item', class extends XRenderElement {
   static get props() {
     return {
-      path: null
+      itemId: null
     }
   }
 
   xInit() {
-    if (this.path) {
-      return fetch('https://node-hnapi.herokuapp.com/' + this.path)
+    if (this.itemId) {
+      return fetch('https://node-hnapi.herokuapp.com/item/' + this.itemId)
         .then((response) => response.json())
         .then((data) => {
           this.data = data;
@@ -27,18 +28,16 @@ customElements.define('x-list-view', class extends XRenderElement {
     }
     if (this.data) {
       const frag = document.createDocumentFragment();
-      for (let i = 0; i < this.data.length; ++i) {
-        frag.appendChild(document.createElement('x-list-item'));
-      }
+      frag.appendChild(document.createElement('x-list-item'));
+      frag.appendChild(document.createElement('x-comments'));
       this.appendChild(frag);
     }
   }
 
   xAssignChildrenData() {
     if (this.data) {
-      this.data.forEach((story, i) => {
-        this.children[i].data = story;
-      });
+      this.querySelector('x-list-item').data = this.data;
+      this.querySelector('x-comments').data = this.data.comments;
     }
   }
 });
