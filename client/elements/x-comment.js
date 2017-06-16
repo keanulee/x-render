@@ -7,12 +7,12 @@ customElements.define('x-comment', class extends XRenderElement {
     }
   }
 
-  xRenderChildren() {
+  xRender() {
     this.innerHTML = this.data.content;
     this.appendChild(document.createElement('x-comments'));
   }
 
-  xAssignChildrenData() {
+  xSetChildrenData() {
     this.querySelector('x-comments').data = this.data.comments;
   }
 });

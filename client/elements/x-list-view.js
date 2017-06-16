@@ -8,7 +8,7 @@ customElements.define('x-list-view', class extends XRenderElement {
     }
   }
 
-  xInit() {
+  xPreRender() {
     if (this.path) {
       return fetch('https://node-hnapi.herokuapp.com/' + this.path)
         .then((response) => response.json())
@@ -21,7 +21,7 @@ customElements.define('x-list-view', class extends XRenderElement {
     }
   }
 
-  xRenderChildren() {
+  xRender() {
     while (this.firstChild) {
       this.removeChild(this.firstChild);
     }
@@ -34,7 +34,7 @@ customElements.define('x-list-view', class extends XRenderElement {
     }
   }
 
-  xAssignChildrenData() {
+  xSetChildrenData() {
     if (this.data) {
       this.data.forEach((story, i) => {
         this.children[i].data = story;

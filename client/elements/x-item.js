@@ -9,7 +9,7 @@ customElements.define('x-item', class extends XRenderElement {
     }
   }
 
-  xInit() {
+  xPreRender() {
     if (this.itemId) {
       return fetch('https://node-hnapi.herokuapp.com/item/' + this.itemId)
         .then((response) => response.json())
@@ -22,7 +22,7 @@ customElements.define('x-item', class extends XRenderElement {
     }
   }
 
-  xRenderChildren() {
+  xRender() {
     while (this.firstChild) {
       this.removeChild(this.firstChild);
     }
@@ -34,7 +34,7 @@ customElements.define('x-item', class extends XRenderElement {
     }
   }
 
-  xAssignChildrenData() {
+  xSetChildrenData() {
     if (this.data) {
       this.querySelector('x-list-item').data = this.data;
       this.querySelector('x-comments').data = this.data.comments;

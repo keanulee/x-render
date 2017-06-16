@@ -10,11 +10,12 @@ customElements.define('x-app', class extends XRenderElement {
     }
   }
 
-  xStart() {
+  xInit() {
     this.updateVisiblePage();
+    this._boundPopstateHandler = this.updateVisiblePage.bind(this);
   }
 
-  xInit() {
+  xPreRender() {
     const itemMatch = /^\/item\/(\d*)/.exec(this.path);
     if (itemMatch) {
       this._selectedView = 'item';
@@ -35,13 +36,13 @@ customElements.define('x-app', class extends XRenderElement {
     this._selectedView = '';
   }
 
-  xRenderChildren() {
+  xRender() {
     this.classList.toggle('list-view', this._selectedView === 'list');
     this.classList.toggle('item-view', this._selectedView === 'item');
     this.innerHTML = `<x-header></x-header><x-list-view></x-list-view><x-item></x-item>`;
   }
 
-  xAssignChildrenData() {
+  xSetChildrenData() {
     this._listElement = this.querySelector('x-list-view');
     this._itemElement = this.querySelector('x-item');
 
@@ -54,7 +55,7 @@ customElements.define('x-app', class extends XRenderElement {
 
   xAddEventListeners() {
     this.addEventListener('click', this.clickHandler);
-    window.addEventListener('popstate', this.updateVisiblePage.bind(this));
+    window.addEventListener('popstate', this._boundPopstateHandler);
   }
 
   /**

@@ -2,59 +2,62 @@ export { XRenderElement }
 
 class XRenderElement extends HTMLElement {
   /**
-   * Set props on self, if necessary.
-   * Note: future prop setting will cause re-render
+   * Props can be thought of as inputs to this element. The element will not render
+   * until all declared props are `!== undefined`. A setter is created for each prop
+   * which, when used, will re-render the element.
    */
-  xStart() {
-    // virtual
+  static get props() {
+    return {};
   }
 
   /**
-   * Initialization code that is run by client and server before xRenderChildren()
-   * after all properties defined in the props getter are set.
-   * Used to assign properties on `this` that are needed by xRenderChildren().
-   * (On client, this is run in constuctor()).
-   * Example: Fetch data from API and assign to `this.data`.
-   *
-   * @return {!Promise} A promise that resolves when xRenderChildren() can be run.
+   * Initialization code that is run on both client and server once during the lifetime
+   * of the page. Used to set the initial state of props (e.g. `this.path =
+   * window.location.pathname`). On the client, this is run inside `constuctor()`.
    */
   xInit() {
     // virtual
   }
 
   /**
-   * Code used to stamp child nodes on this element (through `this.innerHTML` or
-   * `this.appendChild), for example. If this method runs on the server, it will not be
-   * run again on the client.
+   * Once all props are defined, this code starts the render process on both client and
+   * server. Used this to assign properties on `this` that are used by `xRender()`
+   * (e.g. fetch data from an API and assign to `this.data`). If async work is required
+   * before render, return a Promise that resolves when the async work is complete
+   * (e.g. `return fetch(...)`).
    */
-  xRenderChildren() {
+  xPreRender() {
+    // virtual
+  }
+
+  /**
+   * Code used to stamp child nodes on this element (e.g. with `this.innerHTML =` or
+   * `this.appendChild()`) or modify attributes on self. During SSR page load, this
+   * method runs only on the server.
+   */
+  xRender() {
     // virtual
   }
 
   /**
    * Code that is used to set properties on child nodes after they are stamped. Since
-   * properties on elements are not serialized in HTML, this method run on the client
-   * even when the element is server-rendered.
+   * properties on elements are not serialized in HTML, this method runs on both client
+   * and server.
    *
-   * Note: If you're setting attributes on children, this can be done in
-   * xRenderChildren() instead since attributes can be serialized in HTML.
+   * Note: Setting attributes on children should be done in xRender() instead
+   * since attributes are serialized to HTML.
    *
-   * After this method runs, the x-render process starts for child elements.
+   * After this method runs, the render process starts for child elements.
    */
-  xAssignChildrenData() {
+  xSetChildrenData() {
     // virtual
   }
 
   /**
-   * Code that is only needed on the client (not run on server).
-   * Example: Adding 'click' event listeners.
+   * Code that runs only on the client after everything else (e.g. adding event listeners).
    */
   xAddEventListeners() {
     // virtual
-  }
-
-  static get props() {
-    return {};
   }
 
   constructor() {
@@ -77,7 +80,7 @@ class XRenderElement extends HTMLElement {
         this[propName] = oldPropValue;
       }
     });
-    this.xStart();
+    this.xInit();
   }
 
   _render() {
@@ -91,13 +94,13 @@ class XRenderElement extends HTMLElement {
     });
 
     if (allPropsDefined) {
-      Promise.resolve(this.xInit()).then(() => {
+      Promise.resolve(this.xPreRender()).then(() => {
         if (!this.hasAttribute('x-rendered')) {
-          this.xRenderChildren();
+          this.xRender();
         } else {
           this.removeAttribute('x-rendered');
         }
-        this.xAssignChildrenData();
+        this.xSetChildrenData();
         this.xAddEventListeners();
       });
     }

@@ -8,7 +8,7 @@ customElements.define('x-comments', class extends XRenderElement {
     }
   }
 
-  xRenderChildren() {
+  xRender() {
     while (this.firstChild) {
       this.removeChild(this.firstChild);
     }
@@ -21,7 +21,7 @@ customElements.define('x-comments', class extends XRenderElement {
     }
   }
 
-  xAssignChildrenData() {
+  xSetChildrenData() {
     if (this.data) {
       this.data.forEach((data, i) => {
         this.children[i].data = data;

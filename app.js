@@ -4,22 +4,30 @@ const fs = require('fs');
 const jsdom = require('jsdom');
 const { JSDOM } = jsdom;
 const rollup = require('rollup');
+const rollupPluginUglify = require('rollup-plugin-uglify');
+const uglify = require('uglify-es');
+const compression = require('compression');
+
+
+let bundledCode;
+
+rollup.rollup({
+  entry: 'client/elements/x-app.js',
+  plugins: [
+    rollupPluginUglify({}, uglify.minify)
+  ]
+}).then((bundle) => {
+  const result = bundle.generate({ format: 'es' });
+  bundledCode = result.code;
+});
 
 
 const app = express();
-
-let rollupCache;
+app.use(compression());
 
 app.get('/elements/x-app.bundle.js', (req, res) => {
-  rollup.rollup({
-    entry: 'client/elements/x-app.js',
-    cache: rollupCache
-  }).then((bundle) => {
-    rollupCache = bundle;
-    const result = bundle.generate({ format: 'es' });
-    res.set('Content-Type', 'text/javascript');
-    res.send(result.code);
-  });
+  res.set('Content-Type', 'text/javascript');
+  res.send(bundledCode);
 });
 
 app.use(express.static('client'));
@@ -29,60 +37,52 @@ app.get('/*', (req, res) => {
     url: req.protocol + '://' + req.get('host') + req.originalUrl,
     runScripts: 'outside-only'
   };
-  JSDOM.fromFile('client/index.html', jsdomOptions).then((dom) => {
-    // Use rollup since jsdom doesn't do imports
-    rollup.rollup({
-      entry: 'client/' + dom.window.document.querySelector('script[type=module]').getAttribute('src'),
-      cache: rollupCache
-    }).then(async (bundle) => {
-      rollupCache = bundle;
-      const result = bundle.generate({ format: 'es' });
+  JSDOM.fromFile('client/index.html', jsdomOptions).then(async (dom) => {
+    // jsdom doesn't have fetch :(
+    dom.window.fetch = fetch;
 
-      // jsdom doesn't have fetch :(
-      dom.window.fetch = fetch;
+    dom.window.elementRegistry = {};
+    dom.window.renderSubtree = async function renderSubtree(rootNode) {
+      for (let tagName in dom.window.elementRegistry) {
+        const elements = rootNode.querySelectorAll(tagName);
+        const klass = dom.window.elementRegistry[tagName].prototype;
+        for (let i = 0; i < elements.length; ++i) {
+          const el = elements[i];
+          if (!el.hasAttribute('x-rendered')) {
+            el.setAttribute('x-rendered', '');
 
-      dom.window.elementRegistry = {};
-      dom.window.renderSubtree = async function renderSubtree(rootNode) {
-        for (let tagName in dom.window.elementRegistry) {
-          const elements = rootNode.querySelectorAll(tagName);
-          const klass = dom.window.elementRegistry[tagName].prototype;
-          for (let i = 0; i < elements.length; ++i) {
-            const el = elements[i];
-            if (!el.hasAttribute('x-rendered')) {
-              el.setAttribute('x-rendered', '');
-
-              // Copy methods up the prototype until XRenderElement.
-              let prototype = klass;
-              while (typeof prototype.xInit === 'function') {
-                Object.getOwnPropertyNames(prototype).forEach((method) => {
-                  el[method] = klass[method];
-                });
-                prototype = Object.getPrototypeOf(prototype);
-              }
-
-              // TODO: render elements in parallel
-              await el.xStart();
-              await el.xInit();
-              await el.xRenderChildren();
-              await el.xAssignChildrenData();
-              await renderSubtree(el);
+            // Copy methods up the prototype until XRenderElement.
+            let prototype = klass;
+            while (typeof prototype.xPreRender === 'function') {
+              Object.getOwnPropertyNames(prototype).forEach((method) => {
+                el[method] = klass[method];
+              });
+              prototype = Object.getPrototypeOf(prototype);
             }
-          }
-        };
-      };
-      dom.window.customElements = {
-        define: (tagName, c) => {
-          if (typeof c.prototype.xInit === 'function') {
-            dom.window.elementRegistry[tagName] = c;
+
+            // TODO: render elements in parallel
+            await el.xInit();
+            await el.xPreRender();
+            await el.xRender();
+            await el.xSetChildrenData();
+            await renderSubtree(el);
           }
         }
       };
+    };
+    dom.window.customElements = {
+      define: (tagName, c) => {
+        if (typeof c.prototype.xPreRender === 'function') {
+          dom.window.elementRegistry[tagName] = c;
+        }
+      }
+    };
 
-      dom.window.eval(result.code);
+    dom.window.eval(bundledCode);
 
-      await dom.window.renderSubtree(dom.window.document);
-      res.send(dom.serialize());
-    });
+    await dom.window.renderSubtree(dom.window.document);
+    res.set('Link', '</style.css>;rel=preload;as=style,</elements/x-app.bundle.js>;rel=preload;as=script');
+    res.send(dom.serialize());
   });
 });
 
