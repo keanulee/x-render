@@ -2,7 +2,8 @@ export { XRenderElement }
 
 class XRenderElement extends HTMLElement {
   /**
-   * Initialization code that is run by client and server before xRenderChildren().
+   * Initialization code that is run by client and server before xRenderChildren()
+   * after all properties defined in the props getter are set.
    * Used to assign properties on `this` that are needed by xRenderChildren().
    * (On client, this is run in constuctor()).
    * Example: Fetch data from API and assign to `this.data`.
@@ -45,14 +46,43 @@ class XRenderElement extends HTMLElement {
     // virtual
   }
 
-  constructor() {
-    super();
-    this._xInitPromise = this.xInit();
+  static get props() {
+    return {};
   }
 
-  connectedCallback() {
-    if (this._xInitPromise) {
-      this._xInitPromise.then(() => {
+  constructor() {
+    super();
+    this._props = {};
+    Object.keys(this.constructor.props).forEach((propName) => {
+      const oldPropValue = this[propName];
+      Object.defineProperty(this, propName, {
+        get() {
+          return this._props[propName];
+        },
+
+        set(v) {
+          this._props[propName] = v;
+          this._render();
+        }
+      });
+
+      if (oldPropValue) {
+        this[propName] = oldPropValue;
+      }
+    })
+  }
+
+  _render() {
+    if (!this.isConnected) {
+      return;
+    }
+
+    const allPropsDefined = Object.keys(this.constructor.props).every((propName) => {
+      return typeof this[propName] !== 'undefined';
+    });
+
+    if (allPropsDefined) {
+      this.xInit().then(() => {
         if (!this.hasAttribute('x-rendered')) {
           this.xRenderChildren();
         } else {
@@ -61,8 +91,10 @@ class XRenderElement extends HTMLElement {
         this.xAssignChildrenData();
         this.xAddEventListeners();
       });
-
-      this._xInitPromise = null;
     }
+  }
+
+  connectedCallback() {
+    this._render();
   }
 }

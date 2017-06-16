@@ -10,8 +10,26 @@ const app = express();
 
 let rollupCache;
 
-app.get('/', (req, res) => {
-  JSDOM.fromFile('client/index.html', { runScripts: 'outside-only' }).then((dom) => {
+app.get('/elements/x-app.bundle.js', (req, res) => {
+  rollup.rollup({
+    entry: 'client/elements/x-app.js',
+    cache: rollupCache
+  }).then((bundle) => {
+    rollupCache = bundle;
+    const result = bundle.generate({ format: 'es' });
+    res.set('Content-Type', 'text/javascript');
+    res.send(result.code);
+  });
+});
+
+app.use(express.static('client'));
+
+app.get('/*', (req, res) => {
+  const jsdomOptions = {
+    url: req.protocol + '://' + req.get('host') + req.originalUrl,
+    runScripts: 'outside-only'
+  };
+  JSDOM.fromFile('client/index.html', jsdomOptions).then((dom) => {
     // Use rollup since jsdom doesn't do imports
     rollup.rollup({
       entry: 'client/' + dom.window.document.querySelector('script[type=module]').getAttribute('src'),
@@ -32,10 +50,20 @@ app.get('/', (req, res) => {
             const el = elements[i];
             if (!el.hasAttribute('x-rendered')) {
               el.setAttribute('x-rendered', '');
+
+              // Copy methods up the prototype until XRenderElement.
+              let prototype = klass;
+              while (typeof prototype.xInit === 'function') {
+                Object.getOwnPropertyNames(prototype).forEach((method) => {
+                  el[method] = klass[method];
+                });
+                prototype = Object.getPrototypeOf(prototype);
+              }
+
               // TODO: render elements in parallel
-              await klass.xInit.call(el);
-              klass.xRenderChildren.call(el);
-              klass.xAssignChildrenData.call(el);
+              await el.xInit();
+              el.xRenderChildren();
+              el.xAssignChildrenData();
               await renderSubtree(el);
             }
           }
@@ -56,20 +84,6 @@ app.get('/', (req, res) => {
     });
   });
 });
-
-app.get('/elements/x-app.bundle.js', (req, res) => {
-  rollup.rollup({
-    entry: 'client/elements/x-app.js',
-    cache: rollupCache
-  }).then((bundle) => {
-    rollupCache = bundle;
-    const result = bundle.generate({ format: 'es' });
-    res.set('Content-Type', 'text/javascript');
-    res.send(result.code);
-  });
-});
-
-app.use(express.static('client'));
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
