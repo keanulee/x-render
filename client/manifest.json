@@ -1,0 +1,18 @@
+{  
+  "short_name": "x-render",
+  "name": "x-render",
+  "start_url": "/",
+  "icons": [{
+    "src": "https://www.polymer-project.org/images/logos/p-logo-192.png",
+    "type": "image/png",
+    "sizes": "192x192"
+  }, {
+    "src": "https://www.polymer-project.org/images/logos/p-logo-512.png",
+    "type": "image/png",
+    "sizes": "512x512"
+  }],
+  "background_color": "#FAFAFA",
+  "theme_color": "#512DA8",
+  "display": "standalone",
+  "orientation": "portrait"
+}

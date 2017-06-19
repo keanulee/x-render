@@ -70,7 +70,7 @@ app.get('/api/item/:itemId', (req, res) => {
 app.get('/*', (req, res) => {
   let cached = cache.get(req.originalUrl);
   if (cached) {
-    res.set('Link', '</style.css>;rel=preload;as=style,</elements/x-app.bundle.js>;rel=preload;as=script');
+    res.set('Link', '</style.css>;rel=preload;as=style');
     res.send(cached);
     return;
   }
@@ -127,7 +127,7 @@ app.get('/*', (req, res) => {
     await dom.window.renderSubtree(dom.window.document);
     const html = dom.serialize();
 
-    res.set('Link', '</style.css>;rel=preload;as=style,</elements/x-app.bundle.js>;rel=preload;as=script');
+    res.set('Link', '</style.css>;rel=preload;as=style');
     cache.set(req.originalUrl, html);
     res.send(html);
   });

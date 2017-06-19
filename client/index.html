@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>x-render</title>
+  <title>x-news</title>
 
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#283593">
 
+  <link rel="manifest" href="/manifest.json">
   <link rel="stylesheet" href="/style.css">
 
   <script type="module" src="/elements/x-app.js"></script>
@@ -14,5 +16,11 @@
 
 <body>
   <x-app></x-app>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js');
+    }
+  </script>
 </body>
 </html>
