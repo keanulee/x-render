@@ -11,7 +11,7 @@ customElements.define('x-item', class extends XRenderElement {
 
   xPreRender() {
     if (this.itemId) {
-      return fetch('https://node-hnapi.herokuapp.com/item/' + this.itemId)
+      return fetch('/api/item/' + this.itemId)
         .then((response) => response.json())
         .then((data) => {
           this.data = data;

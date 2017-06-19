@@ -7,6 +7,11 @@ const rollup = require('rollup');
 const rollupPluginUglify = require('rollup-plugin-uglify');
 const uglify = require('uglify-es');
 const compression = require('compression');
+const LRU = require('lru-cache');
+const cache = LRU({
+  max: 100,
+  maxAge: 5 * 60 * 1000
+});
 
 
 let bundledCode;
@@ -32,14 +37,53 @@ app.get('/elements/x-app.bundle.js', (req, res) => {
 
 app.use(express.static('client'));
 
+app.get('/api/:list', (req, res) => {
+  let cached = cache.get(req.originalUrl);
+  if (cached) {
+    res.json(cached);
+    return;
+  }
+
+  fetch('https://node-hnapi.herokuapp.com/' + req.params.list)
+    .then((response) => response.json())
+    .then((json) => {
+      cache.set(req.originalUrl, json);
+      res.json(json);
+    });
+});
+
+app.get('/api/item/:itemId', (req, res) => {
+  let cached = cache.get(req.originalUrl);
+  if (cached) {
+    res.json(cached);
+    return;
+  }
+
+  fetch('https://node-hnapi.herokuapp.com/item/' +  + req.params.itemId)
+    .then((response) => response.json())
+    .then((json) => {
+      cache.set(req.originalUrl, json);
+      res.json(json);
+    });
+});
+
 app.get('/*', (req, res) => {
+  let cached = cache.get(req.originalUrl);
+  if (cached) {
+    res.set('Link', '</style.css>;rel=preload;as=style,</elements/x-app.bundle.js>;rel=preload;as=script');
+    res.send(cached);
+    return;
+  }
+
+  const origin = req.protocol + '://' + req.get('host');
   const jsdomOptions = {
-    url: req.protocol + '://' + req.get('host') + req.originalUrl,
+    url: origin + req.originalUrl,
     runScripts: 'outside-only'
   };
   JSDOM.fromFile('client/index.html', jsdomOptions).then(async (dom) => {
-    // jsdom doesn't have fetch :(
-    dom.window.fetch = fetch;
+    // jsdom doesn't have fetch, and the fetch library only handles absolute URLs,
+    // so we polyfill only what we need here.
+    dom.window.fetch = (url) => fetch(origin + url);
 
     dom.window.elementRegistry = {};
     dom.window.renderSubtree = async function renderSubtree(rootNode) {
@@ -81,8 +125,11 @@ app.get('/*', (req, res) => {
     dom.window.eval(bundledCode);
 
     await dom.window.renderSubtree(dom.window.document);
+    const html = dom.serialize();
+
     res.set('Link', '</style.css>;rel=preload;as=style,</elements/x-app.bundle.js>;rel=preload;as=script');
-    res.send(dom.serialize());
+    cache.set(req.originalUrl, html);
+    res.send(html);
   });
 });
 

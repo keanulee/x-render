@@ -9,6 +9,7 @@
     "compression": "^1.6.2",
     "express": "^4.15.3",
     "jsdom": "^11.0.0",
+    "lru-cache": "^4.1.1",
     "node-fetch": "^1.7.1",
     "rollup": "^0.43.0",
     "rollup-plugin-uglify": "^2.0.1",

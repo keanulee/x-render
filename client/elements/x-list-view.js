@@ -10,7 +10,7 @@ customElements.define('x-list-view', class extends XRenderElement {
 
   xPreRender() {
     if (this.path) {
-      return fetch('https://node-hnapi.herokuapp.com/' + this.path)
+      return fetch('/api/' + this.path)
         .then((response) => response.json())
         .then((data) => {
           this.data = data;
