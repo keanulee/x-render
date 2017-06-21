@@ -35,7 +35,7 @@ app.get('/elements/x-app.bundle.js', (req, res) => {
   res.send(bundledCode);
 });
 
-app.use(express.static('client'));
+app.use(express.static('client', { index: false }));
 
 app.get('/api/:list', (req, res) => {
   let cached = cache.get(req.originalUrl);
@@ -68,10 +68,30 @@ app.get('/api/item/:itemId', (req, res) => {
 });
 
 app.get('/*', (req, res) => {
+  if ('norender' in req.query) {
+    const pushQuery = req.query.push;
+    if (pushQuery) {
+      const pushHeaders = [];
+      if (pushQuery.indexOf('style') !== -1) {
+        pushHeaders.push('</style.css>;rel=preload;as=style');
+      }
+      if (pushQuery.indexOf('script') !== -1) {
+        pushHeaders.push('</elements/x-app.bundle.js>;rel=preload;as=script');
+      }
+      if (pushHeaders.length > 0) {
+        res.set('Link', pushHeaders.join(','));
+      }
+    }
+    res.sendFile(__dirname + '/client/index.html');
+    return;
+  }
+
   let cached = cache.get(req.originalUrl);
   if (cached) {
-    res.set('Link', '</style.css>;rel=preload;as=style');
-    res.send(cached);
+    if (cached.linkHeaderValue) {
+      res.set('Link', cached.linkHeaderValue);
+    }
+    res.send(cached.html);
     return;
   }
 
@@ -125,11 +145,29 @@ app.get('/*', (req, res) => {
     dom.window.eval(bundledCode);
 
     await dom.window.renderSubtree(dom.window.document);
-    const html = dom.serialize();
 
-    res.set('Link', '</style.css>;rel=preload;as=style');
-    cache.set(req.originalUrl, html);
-    res.send(html);
+    const result = {
+      linkHeaderValue: null,
+      html: dom.serialize()
+    };
+
+    const pushQuery = req.query.push;
+    if (pushQuery) {
+      const pushHeaders = [];
+      if (pushQuery.indexOf('style') !== -1) {
+        pushHeaders.push('</style.css>;rel=preload;as=style');
+      }
+      if (pushQuery.indexOf('script') !== -1) {
+        pushHeaders.push('</elements/x-app.bundle.js>;rel=preload;as=script');
+      }
+      if (pushHeaders.length > 0) {
+        result.linkHeaderValue = pushHeaders.join(',');
+        res.set('Link', result.linkHeaderValue);
+      }
+    }
+
+    cache.set(req.originalUrl, result);
+    res.send(result.html);
   });
 });
 
