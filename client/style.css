@@ -4,7 +4,7 @@ body {
 }
 
 a {
-  color: #000;
+  color: inherit;
   text-decoration: none;
 }
 
@@ -22,21 +22,19 @@ x-app {
 x-header {
   display: block;
   background: #f60;
-  padding: 8px;
+  padding: 10px;
 }
 
 x-list-item {
   display: block;
   padding: 8px;
-}
-
-x-list-item a {
-  display: block;
-}
-
-x-list-item a.meta {
   color: #999;
   font-size: 10px; 
+}
+
+x-list-item a.title {
+  color: #000;
+  font-size: 16px; 
 }
 
 x-comments {
