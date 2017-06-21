@@ -72,11 +72,16 @@ app.get('/*', (req, res) => {
     const pushQuery = req.query.push;
     if (pushQuery) {
       const pushHeaders = [];
-      if (pushQuery.indexOf('style') !== -1) {
+      const pushAll = pushQuery.indexOf('all') !== -1;
+      if (pushAll || pushQuery.indexOf('style') !== -1) {
         pushHeaders.push('</style.css>;rel=preload;as=style');
       }
-      if (pushQuery.indexOf('script') !== -1) {
+      if (pushAll || pushQuery.indexOf('script') !== -1) {
         pushHeaders.push('</elements/x-app.bundle.js>;rel=preload;as=script');
+      }
+      if (pushAll || pushQuery.indexOf('data') !== -1) {
+        // TODO: push data for specific URL.
+        pushHeaders.push('</api/news>;rel=preload');
       }
       if (pushHeaders.length > 0) {
         res.set('Link', pushHeaders.join(','));
@@ -154,11 +159,16 @@ app.get('/*', (req, res) => {
     const pushQuery = req.query.push;
     if (pushQuery) {
       const pushHeaders = [];
-      if (pushQuery.indexOf('style') !== -1) {
+      const pushAll = pushQuery.indexOf('all') !== -1;
+      if (pushAll || pushQuery.indexOf('style') !== -1) {
         pushHeaders.push('</style.css>;rel=preload;as=style');
       }
-      if (pushQuery.indexOf('script') !== -1) {
+      if (pushAll || pushQuery.indexOf('script') !== -1) {
         pushHeaders.push('</elements/x-app.bundle.js>;rel=preload;as=script');
+      }
+      if (pushAll || pushQuery.indexOf('data') !== -1) {
+        // TODO: push data for specific URL.
+        pushHeaders.push('</api/news>;rel=preload');
       }
       if (pushHeaders.length > 0) {
         result.linkHeaderValue = pushHeaders.join(',');

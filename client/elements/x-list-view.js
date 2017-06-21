@@ -10,11 +10,15 @@ customElements.define('x-list-view', class extends XRenderElement {
 
   xPreRender() {
     if (this.path) {
-      return fetch('/api/' + this.path)
-        .then((response) => response.json())
-        .then((data) => {
-          this.data = data;
+      return new Promise((resolve) => {
+        const xhr = new XMLHttpRequest();
+        xhr.addEventListener('load', () => {
+          this.data = JSON.parse(xhr.responseText);
+          resolve();
         });
+        xhr.open('GET', '/api/' + this.path);
+        xhr.send();
+      });
     } else {
       this.data = null;
       return Promise.resolve();

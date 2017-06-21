@@ -11,11 +11,15 @@ customElements.define('x-item', class extends XRenderElement {
 
   xPreRender() {
     if (this.itemId) {
-      return fetch('/api/item/' + this.itemId)
-        .then((response) => response.json())
-        .then((data) => {
-          this.data = data;
+      return new Promise((resolve) => {
+        const xhr = new XMLHttpRequest();
+        xhr.addEventListener('load', () => {
+          this.data = JSON.parse(xhr.responseText);
+          resolve();
         });
+        xhr.open('GET', '/api/item/' + this.itemId);
+        xhr.send();
+      });
     } else {
       this.data = null;
       return Promise.resolve();
