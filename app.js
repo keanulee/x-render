@@ -27,6 +27,16 @@ rollup.rollup({
 });
 
 
+async function getCachedResponse(req, res, createResponse) {
+  let content = cache.get(req.originalUrl);
+  if (!content) {
+    content = await createResponse();
+    cache.set(req.originalUrl, content);
+  }
+  return content;
+}
+
+
 const app = express();
 app.use(compression());
 
@@ -37,79 +47,61 @@ app.get('/elements/x-app.bundle.js', (req, res) => {
 
 app.use(express.static('client', { index: false }));
 
-app.get('/api/:list', (req, res) => {
-  let cached = cache.get(req.originalUrl);
-  if (cached) {
-    res.json(cached);
-    return;
-  }
-
-  fetch('https://node-hnapi.herokuapp.com/' + req.params.list)
-    .then((response) => response.json())
-    .then((json) => {
-      cache.set(req.originalUrl, json);
-      res.json(json);
-    });
+app.get('/api/', async (req, res) => {
+  const response = await getCachedResponse(req, res, () => {
+    return fetch('https://node-hnapi.herokuapp.com/news')
+      .then((response) => response.json());
+  });
+  res.json(response);
 });
 
-app.get('/api/item/:itemId', (req, res) => {
-  let cached = cache.get(req.originalUrl);
-  if (cached) {
-    res.json(cached);
-    return;
-  }
-
-  fetch('https://node-hnapi.herokuapp.com/item/' +  + req.params.itemId)
-    .then((response) => response.json())
-    .then((json) => {
-      cache.set(req.originalUrl, json);
-      res.json(json);
-    });
+app.get('/api/:list', async (req, res) => {
+  const response = await getCachedResponse(req, res, () => {
+    return fetch('https://node-hnapi.herokuapp.com/' + req.params.list)
+      .then((response) => response.json());
+  });
+  res.json(response);
 });
 
-app.get('/*', (req, res) => {
-  if ('norender' in req.query) {
-    const pushQuery = req.query.push;
-    if (pushQuery) {
-      const pushHeaders = [];
-      const pushAll = pushQuery.indexOf('all') !== -1;
-      if (pushAll || pushQuery.indexOf('style') !== -1) {
-        pushHeaders.push('</style.css>;rel=preload;as=style');
-      }
-      if (pushAll || pushQuery.indexOf('script') !== -1) {
-        pushHeaders.push('</elements/x-app.bundle.js>;rel=preload;as=script');
-      }
-      if (pushAll || pushQuery.indexOf('data') !== -1) {
-        // TODO: push data for specific URL.
-        pushHeaders.push('</api/news>;rel=preload');
-      }
-      if (pushHeaders.length > 0) {
-        res.set('Link', pushHeaders.join(','));
-      }
+app.get('/api/item/:itemId', async (req, res) => {
+  const response = await getCachedResponse(req, res, () => {
+    return fetch('https://node-hnapi.herokuapp.com/item/' +  + req.params.itemId)
+      .then((response) => response.json());
+  });
+  res.json(response);
+});
+
+app.get('/*', async (req, res) => {
+  const pushQuery = req.query.push;
+  if (pushQuery) {
+    const pushHeaders = [];
+    const pushAll = pushQuery.indexOf('all') !== -1;
+    if (pushAll || pushQuery.indexOf('style') !== -1) {
+      pushHeaders.push('</style.css>;rel=preload;as=style');
     }
+    if (pushAll || pushQuery.indexOf('script') !== -1) {
+      pushHeaders.push('</elements/x-app.bundle.js>;rel=preload;as=script');
+    }
+    if (pushAll || pushQuery.indexOf('data') !== -1) {
+      pushHeaders.push(`</api${req.path}>;rel=preload`);
+    }
+    if (pushHeaders.length > 0) {
+      res.set('Link', pushHeaders.join(','));
+    }
+  }
+
+  if ('norender' in req.query) {
     res.sendFile(__dirname + '/client/index.html');
     return;
   }
 
-  let cached = cache.get(req.originalUrl);
-  if (cached) {
-    if (cached.linkHeaderValue) {
-      res.set('Link', cached.linkHeaderValue);
-    }
-    res.send(cached.html);
-    return;
-  }
-
-  const origin = req.protocol + '://' + req.get('host');
-  const jsdomOptions = {
-    url: origin + req.originalUrl,
-    runScripts: 'outside-only'
-  };
-  JSDOM.fromFile('client/index.html', jsdomOptions).then(async (dom) => {
-    // jsdom doesn't have fetch, and the fetch library only handles absolute URLs,
-    // so we polyfill only what we need here.
-    dom.window.fetch = (url) => fetch(origin + url);
-
+  const response = await getCachedResponse(req, res, async () => {
+    const origin = req.protocol + '://' + req.get('host');
+    const jsdomOptions = {
+      url: origin + req.originalUrl,
+      runScripts: 'outside-only'
+    };
+    const dom = await JSDOM.fromFile('client/index.html', jsdomOptions);
     dom.window.elementRegistry = {};
     dom.window.renderSubtree = async function renderSubtree(rootNode) {
       for (let tagName in dom.window.elementRegistry) {
@@ -148,37 +140,11 @@ app.get('/*', (req, res) => {
     };
 
     dom.window.eval(bundledCode);
-
     await dom.window.renderSubtree(dom.window.document);
-
-    const result = {
-      linkHeaderValue: null,
-      html: dom.serialize()
-    };
-
-    const pushQuery = req.query.push;
-    if (pushQuery) {
-      const pushHeaders = [];
-      const pushAll = pushQuery.indexOf('all') !== -1;
-      if (pushAll || pushQuery.indexOf('style') !== -1) {
-        pushHeaders.push('</style.css>;rel=preload;as=style');
-      }
-      if (pushAll || pushQuery.indexOf('script') !== -1) {
-        pushHeaders.push('</elements/x-app.bundle.js>;rel=preload;as=script');
-      }
-      if (pushAll || pushQuery.indexOf('data') !== -1) {
-        // TODO: push data for specific URL.
-        pushHeaders.push('</api/news>;rel=preload');
-      }
-      if (pushHeaders.length > 0) {
-        result.linkHeaderValue = pushHeaders.join(',');
-        res.set('Link', result.linkHeaderValue);
-      }
-    }
-
-    cache.set(req.originalUrl, result);
-    res.send(result.html);
+    return dom.serialize();
   });
+
+  res.send(response);
 });
 
 const PORT = process.env.PORT || 8080;

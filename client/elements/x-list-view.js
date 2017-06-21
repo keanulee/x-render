@@ -9,7 +9,7 @@ customElements.define('x-list-view', class extends XRenderElement {
   }
 
   xPreRender() {
-    if (this.path) {
+    if (typeof this.path !== 'undefined') {
       return new Promise((resolve) => {
         const xhr = new XMLHttpRequest();
         xhr.addEventListener('load', () => {

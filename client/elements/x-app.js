@@ -30,7 +30,7 @@ customElements.define('x-app', class extends XRenderElement {
       case '/ask':
       case '/jobs':
         this._selectedView = 'list';
-        this._listPath = this.path.slice(1) || 'news';
+        this._listPath = this.path.slice(1);
         return;
     }
     this._selectedView = '';
